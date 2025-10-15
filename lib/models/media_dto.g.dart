@@ -13,6 +13,7 @@ MediaInfoDTO _$MediaInfoDTOFromJson(Map<String, dynamic> json) => MediaInfoDTO(
       fileExtension: json['fileExtension'] as String,
       fileSizeInBytes: (json['fileSizeInBytes'] as num).toInt(),
       fileUrl: json['fileUrl'] as String?,
+      thumbnailUrl: json['thumbnailUrl'] as String?,
     );
 
 Map<String, dynamic> _$MediaInfoDTOToJson(MediaInfoDTO instance) =>
@@ -23,4 +24,5 @@ Map<String, dynamic> _$MediaInfoDTOToJson(MediaInfoDTO instance) =>
       'fileExtension': instance.fileExtension,
       'fileSizeInBytes': instance.fileSizeInBytes,
       'fileUrl': instance.fileUrl,
+      'thumbnailUrl': instance.thumbnailUrl,
     };

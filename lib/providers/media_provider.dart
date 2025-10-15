@@ -42,7 +42,7 @@ class MediaProvider extends ChangeNotifier {
 
   /// Tạo URL xem/phát file.
   String urlOf(MediaInfoDTO m) {
-    final rawExt = (m.fileExtension ?? '').trim();
+    final rawExt = (m.fileExtension).trim();
     final ext = rawExt.isEmpty
         ? ''
         : (rawExt.startsWith('.') ? rawExt : '.${rawExt}');
@@ -53,20 +53,23 @@ class MediaProvider extends ChangeNotifier {
       return url;
     }
 
-    final nameWithExt = (m.fileName ?? '').endsWith(ext)
-        ? (m.fileName ?? '')
-        : '${m.fileName ?? ''}$ext';
+    final nameWithExt = (m.fileName).endsWith(ext)
+        ? (m.fileName)
+        : '${m.fileName}$ext';
 
     return 'http://10.0.2.2:5099/uploads/$nameWithExt';
   }
 
   bool isVideo(MediaInfoDTO m) {
-    final e = (m.fileExtension ?? '').toLowerCase();
+    final e = (m.fileExtension).toLowerCase();
     return e == '.mp4' || e == '.mov' || e == '.m4v' || e == '.webm';
   }
 
-  // ✅ THÊM HÀM MỚI VÀO ĐÂY
   /// Lấy tên hiển thị cho media: ưu tiên mô tả, fallback về tên file.
   String displayName(MediaInfoDTO m) =>
       (m.fileDescription?.isNotEmpty ?? false) ? m.fileDescription! : m.fileName;
+
+  // ✅ SỬA LẠI HÀM NÀY
+  /// Lấy URL ảnh đại diện: ưu tiên thumbnail, fallback về URL file chính.
+  String posterOf(MediaInfoDTO m) => m.thumbnailUrl ?? urlOf(m);
 }

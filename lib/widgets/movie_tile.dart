@@ -8,12 +8,10 @@ import 'package:provider/provider.dart';
 import '../models/movie_dto.dart';
 import '../providers/movie_provider.dart';
 
-
-// Imports cho MediaTile (mới)
+// Imports cho MediaTile
 import '../models/media_dto.dart';
 import '../providers/media_provider.dart';
 import '../pages/media_player_page.dart';
-
 
 // ====================================================================
 // PHẦN CODE CŨ CỦA BẠN (GIỮ NGUYÊN)
@@ -21,17 +19,14 @@ import '../pages/media_player_page.dart';
 
 const String kApiBase = 'http://10.0.2.2:5099';
 
-/// Xử lý URL ảnh: bóc link gốc từ Google, ghép base URL cho link tương đối.
 String? normalizePoster(String? url) {
   if (url == null || url.isEmpty) return null;
-
   if (url.startsWith('/')) return '$kApiBase$url';
   if (!url.startsWith('http')) return '$kApiBase/$url';
-
   final u = Uri.tryParse(url);
   if (u == null) return null;
-
-  if (u.host.contains('googleusercontent.com') || u.host.contains('gstatic.com')) {
+  if (u.host.contains('googleusercontent.com') ||
+      u.host.contains('gstatic.com')) {
     return url;
   }
   if (u.host.contains('google.') && u.path == '/imgres') {
@@ -53,7 +48,6 @@ class MovieTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final poster = normalizePoster(movie.posterUrl);
-
     final leading = poster != null
         ? ClipRRect(
             borderRadius: BorderRadius.circular(6),
@@ -71,16 +65,16 @@ class MovieTile extends StatelessWidget {
             ),
           )
         : const Icon(Icons.movie, size: 40);
-
     return ListTile(
       leading: leading,
       title: Text(movie.title ?? '(Không tên)'),
-      subtitle: Text('⭐ ${movie.rating?.toString() ?? 'N/A'} • ${movie.studioName}'),
+      subtitle: Text(
+        '⭐ ${movie.rating?.toString() ?? 'N/A'} • ${movie.studioName}',
+      ),
       onTap: onTap,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Edit
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () async {
@@ -95,14 +89,13 @@ class MovieTile extends StatelessWidget {
                 ),
               );
               if (ok == true && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đã cập nhật')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Đã cập nhật')));
                 context.read<MovieProvider>().refresh();
               }
             },
           ),
-          // Delete
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.redAccent),
             onPressed: () async {
@@ -110,7 +103,9 @@ class MovieTile extends StatelessWidget {
                 context: context,
                 builder: (_) => AlertDialog(
                   title: const Text('Xóa phim?'),
-                  content: Text('Bạn có chắc muốn xóa "${movie.title ?? 'không tên'}"?'),
+                  content: Text(
+                    'Bạn có chắc muốn xóa "${movie.title ?? 'không tên'}"?',
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context, false),
@@ -125,9 +120,9 @@ class MovieTile extends StatelessWidget {
               );
               if (yes == true && context.mounted) {
                 await context.read<MovieProvider>().remove(movie.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đã xóa phim')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Đã xóa phim')));
               }
             },
           ),
@@ -137,9 +132,8 @@ class MovieTile extends StatelessWidget {
   }
 }
 
-
 // ====================================================================
-// ✅ PHẦN CODE MỚI ĐƯỢC THÊM VÀO ĐÂY
+// ✅ PHẦN CODE MỚI ĐƯỢC CẬP NHẬT
 // ====================================================================
 
 class MediaTile extends StatelessWidget {
@@ -149,21 +143,26 @@ class MediaTile extends StatelessWidget {
   String _titleOf(MediaInfoDTO m) {
     final t = (m.fileDescription ?? '').trim();
     if (t.isNotEmpty) return t;
-    return (m.fileName ?? 'Untitled').trim();
+    return (m.fileName).trim();
   }
 
   @override
   Widget build(BuildContext context) {
     final pv = context.read<MediaProvider>();
     final isVideo = pv.isVideo(media);
-    final url = pv.urlOf(media);
+    // Lấy URL poster/thumbnail để hiển thị trên lưới
+    final posterUrl = pv.posterOf(media);
+    // Lấy URL file gốc để xem/phát
+    final mainUrl = pv.urlOf(media);
 
     return InkWell(
       onTap: () {
         if (isVideo) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => MediaPlayerPage(videoUrl: url)),
+            MaterialPageRoute(
+              builder: (_) => MediaPlayerPage(videoUrl: mainUrl),
+            ), // Dùng URL gốc
           );
         } else {
           Navigator.push(
@@ -175,11 +174,14 @@ class MediaTile extends StatelessWidget {
                 body: Center(
                   child: InteractiveViewer(
                     child: CachedNetworkImage(
-                      imageUrl: url,
+                      imageUrl: mainUrl, // Dùng URL gốc
                       httpHeaders: const {'User-Agent': 'Mozilla/5.0'},
                       fit: BoxFit.contain,
-                      errorWidget: (_, __, ___) =>
-                          const Icon(Icons.broken_image, color: Colors.white70, size: 64),
+                      errorWidget: (_, __, ___) => const Icon(
+                        Icons.broken_image,
+                        color: Colors.white70,
+                        size: 64,
+                      ),
                     ),
                   ),
                 ),
@@ -191,16 +193,15 @@ class MediaTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Poster
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Ảnh/thumbnail
+                  // ✅ HIỂN THỊ THUMBNAIL Ở ĐÂY
                   CachedNetworkImage(
-                    imageUrl: url,
+                    imageUrl: posterUrl, // Dùng poster/thumbnail URL
                     httpHeaders: const {'User-Agent': 'Mozilla/5.0'},
                     fit: BoxFit.cover,
                     errorWidget: (_, __, ___) => Container(
@@ -212,7 +213,6 @@ class MediaTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Icon play nếu là video
                   if (isVideo)
                     Align(
                       alignment: Alignment.center,
@@ -224,10 +224,12 @@ class MediaTile extends StatelessWidget {
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white38),
                         ),
-                        child: const Icon(Icons.play_arrow, color: Colors.white),
+                        child: const Icon(
+                          Icons.play_arrow,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  // Gradient đáy
                   const Align(
                     alignment: Alignment.bottomCenter,
                     child: DecoratedBox(
@@ -245,12 +247,19 @@ class MediaTile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          // Tên phim
-          Text(
-            _titleOf(media),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+          SizedBox(
+            width: double.infinity,
+            child: Text(
+              _titleOf(media),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
