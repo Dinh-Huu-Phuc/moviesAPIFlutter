@@ -1,25 +1,11 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+// import 'dart.async';
+// import 'package.flutter/foundation.dart';
 import '../repos/media_repo.dart';
 import '../models/media_dto.dart';
 import '../models/paged_media_dto.dart';
 
-// Enum để lọc media theo loại
 enum MediaTypeFilter { all, video, image }
-
-// Extension để chuyển enum thành param string cho API
-extension _ToParam on MediaTypeFilter {
-  String get param {
-    switch (this) {
-      case MediaTypeFilter.video:
-        return 'video';
-      case MediaTypeFilter.image:
-        return 'image';
-      case MediaTypeFilter.all:
-      default:
-        return 'all';
-    }
-  }
-}
 
 class MediaProvider extends ChangeNotifier {
   final MediaRepo repo;
@@ -27,112 +13,116 @@ class MediaProvider extends ChangeNotifier {
 
   bool loading = false;
   String? error;
-
-  // Trạng thái cho việc phân trang (paging)
-  final List<MediaInfoDTO> items = [];
-  int page = 1;
+  List<MediaInfoDTO> items = [];
   bool hasMore = true;
-  static const int size = 24; // Số item mỗi trang
 
-  // Các bộ lọc hiện tại
-  MediaTypeFilter type = MediaTypeFilter.all;
-  int? movieId;
-  String? q;
+  // --- Trạng thái bộ lọc (private) ---
+  MediaTypeFilter _type = MediaTypeFilter.all;
+  int? _movieId;
+  String _query = "";
+  int _page = 1;
+  final int _pageSize = 24;
 
-  /// Tải lại danh sách từ đầu (khi đổi bộ lọc hoặc kéo để refresh).
-  Future<void> refresh({MediaTypeFilter? type, int? movieId, String? query}) async {
-    // Cập nhật các bộ lọc nếu được cung cấp
-    if (type != null) this.type = type;
-    this.movieId = movieId ?? this.movieId;
-    this.q = query ?? this.q;
-
-    // Reset lại trạng thái phân trang
-    page = 1;
-    hasMore = true;
-    items.clear();
-
-    // Tải trang dữ liệu đầu tiên
-    await fetchMore();
+  // ===== CÁC HÀM SETTER CÔNG KHAI ĐỂ THAY ĐỔI BỘ LỌC =====
+  void setType(MediaTypeFilter t) {
+    if (_type == t) return;
+    _type = t;
+    refresh(); // Tự động tải lại dữ liệu khi đổi bộ lọc
   }
 
-  /// Tải thêm dữ liệu cho trang tiếp theo.
-  Future<void> fetchMore() async {
-    if (loading || !hasMore) return;
+  void setMovie(int? id) {
+    if (_movieId == id) return;
+    _movieId = id;
+    refresh();
+  }
 
+  // ✅ CẬP NHẬT LẠI HÀM NÀY
+  void setQuery(String q) {
+    final normalized = q.trim();
+    if (_query == normalized) return;
+    _query = normalized; // rỗng = không lọc
+    refresh();
+  }
+
+  // ===== CÁC HÀM ĐIỀU KHIỂN LUỒNG DỮ LIỆU =====
+  Future<void> refresh() async {
+    _page = 1;
+    hasMore = true;
+    // Không xóa `items` ngay để UI không bị giật, `_load` sẽ thay thế nó
+    await _load(append: false);
+  }
+
+  Future<void> fetchMore() async {
+    if (!hasMore || loading) return;
+    _page++;
+    await _load(append: true);
+  }
+
+  // ===== HÀM GỌI API CỐT LÕI =====
+  Future<void> _load({bool append = false}) async {
+    if (loading) return;
     loading = true;
     error = null;
-    // Thông báo cho UI biết để hiển thị vòng xoay loading
-    // (Future.microtask để tránh lỗi setState during build)
-    Future.microtask(notifyListeners);
+    if (!append) {
+      notifyListeners();
+    }
 
     try {
-      final data = await repo.listPaged(
-        page: page,
-        size: size,
-        movieId: movieId,
-        type: this.type.param,
-        q: q,
+      final typeStr = switch (_type) {
+        MediaTypeFilter.video => "video",
+        MediaTypeFilter.image => "image",
+        _ => "all",
+      };
+
+      final res = await repo.listPaged(
+        movieId: _movieId,
+        type: typeStr,
+        q: _query,
+        pageNumber: _page,
+        pageSize: _pageSize,
       );
-      if (data.items.isEmpty) {
-        hasMore = false; // Đã hết dữ liệu
+
+      if (append) {
+        items.addAll(res.items);
       } else {
-        items.addAll(data.items);
-        page++; // Tăng số trang cho lần gọi tiếp theo
+        items = res.items;
       }
+
+      hasMore = _page < res.totalPages;
     } catch (e) {
       error = e.toString();
+      if (_page > 1) _page--;
     } finally {
       loading = false;
       notifyListeners();
     }
   }
 
-  // --- CÁC HÀM TIỆN ÍCH (HELPERS) ---
+  // ===== CÁC HÀM TIỆN ÍCH (HELPERS) ĐƯỢC GIỮ LẠI =====
 
-  /// Lấy URL chính để xem/phát file.
-  /// Hàm này gọi hàm "chuyên gia" resolveUrl từ Repo.
   String urlOf(MediaInfoDTO m) => repo.resolveUrl(m);
 
-  /// Lấy URL ảnh đại diện (poster).
-  /// Ưu tiên dùng ảnh thumbnail nếu có, nếu không thì dùng URL chính.
   String posterOf(MediaInfoDTO m) {
-    // Nếu có thumbnail, tạo một DTO tạm thời để resolve URL của thumbnail
     if (m.thumbnailUrl != null && m.thumbnailUrl!.isNotEmpty) {
-      // Hàm resolveUrl của repo hoạt động dựa trên fileUrl,
-      // nên ta tạo một bản sao và thay fileUrl bằng thumbnailUrl.
       final tempDtoForThumbnail = MediaInfoDTO(
           id: m.id,
           fileName: m.fileName,
           fileExtension: m.fileExtension,
           fileSizeInBytes: m.fileSizeInBytes,
           fileDescription: m.fileDescription,
-          fileUrl: m.thumbnailUrl // <-- Dùng URL của thumbnail ở đây
-      );
+          fileUrl: m.thumbnailUrl);
       return repo.resolveUrl(tempDtoForThumbnail);
     }
-    // Nếu không có thumbnail, dùng URL của file chính
     return repo.resolveUrl(m);
   }
 
-  /// Kiểm tra xem file có phải là video không.
   bool isVideo(MediaInfoDTO m) {
     final e = (m.fileExtension).toLowerCase();
     return e == '.mp4' || e == '.mov' || e == '.m4v' || e == '.webm';
   }
 
-  /// Lấy tên để hiển thị cho media (ưu tiên mô tả, sau đó đến tên file).
   String displayName(MediaInfoDTO m) =>
-      (m.fileDescription?.isNotEmpty ?? false) ? m.fileDescription! : m.fileName;
-
-  /// Đặt lại bộ lọc theo loại media và tải lại danh sách.
-  void setType(MediaTypeFilter t) {
-    if (type == t) return;
-    refresh(type: t);
-  }
-
-  /// Đặt lại bộ lọc theo phim và tải lại danh sách.
-  void setMovie(int? id) {
-    if (movieId == id) return;
-    refresh(movieId: id);
-  }
+      (m.fileDescription?.isNotEmpty ?? false)
+          ? m.fileDescription!
+          : ((m.title?.isNotEmpty ?? false) ? m.title! : m.fileName);
 }

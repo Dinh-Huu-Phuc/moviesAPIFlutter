@@ -169,7 +169,7 @@ class _MediaPlayerPageState extends State<MediaPlayerPage> {
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 18),
-        title: const Text('Xem video'),
+        title: const Text(''),
       ),
       body: Center(
         child: _err != null

@@ -8,10 +8,12 @@ import 'package:provider/provider.dart';
 import '../models/movie_dto.dart';
 import '../providers/movie_provider.dart';
 
+
 // Imports cho MediaTile
 import '../models/media_dto.dart';
 import '../providers/media_provider.dart';
 import '../pages/media_player_page.dart';
+import '../pages/media_detail_page.dart';
 
 // ====================================================================
 // PHẦN CODE CŨ CỦA BẠN (GIỮ NGUYÊN)
@@ -140,68 +142,31 @@ class MediaTile extends StatelessWidget {
   final MediaInfoDTO media;
   const MediaTile({super.key, required this.media});
 
-  String _titleOf(MediaInfoDTO m) {
-    final t = (m.fileDescription ?? '').trim();
-    if (t.isNotEmpty) return t;
-    return (m.fileName).trim();
-  }
-
   @override
   Widget build(BuildContext context) {
     final pv = context.read<MediaProvider>();
     final isVideo = pv.isVideo(media);
-    // Lấy URL poster/thumbnail để hiển thị trên lưới
     final posterUrl = pv.posterOf(media);
-    // Lấy URL file gốc để xem/phát
-    final mainUrl = pv.urlOf(media);
 
     return InkWell(
       onTap: () {
-        if (isVideo) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => MediaPlayerPage(videoUrl: mainUrl),
-            ), // Dùng URL gốc
-          );
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => Scaffold(
-                backgroundColor: Colors.black,
-                appBar: AppBar(backgroundColor: Colors.black),
-                body: Center(
-                  child: InteractiveViewer(
-                    child: CachedNetworkImage(
-                      imageUrl: mainUrl, // Dùng URL gốc
-                      httpHeaders: const {'User-Agent': 'Mozilla/5.0'},
-                      fit: BoxFit.contain,
-                      errorWidget: (_, __, ___) => const Icon(
-                        Icons.broken_image,
-                        color: Colors.white70,
-                        size: 64,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => MediaDetailPage(media: media)),
+        );
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Phần Thumbnail được giữ nguyên
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // ✅ HIỂN THỊ THUMBNAIL Ở ĐÂY
                   CachedNetworkImage(
-                    imageUrl: posterUrl, // Dùng poster/thumbnail URL
+                    imageUrl: posterUrl,
                     httpHeaders: const {'User-Agent': 'Mozilla/5.0'},
                     fit: BoxFit.cover,
                     errorWidget: (_, __, ___) => Container(
@@ -230,37 +195,34 @@ class MediaTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                  const Align(
-                    alignment: Alignment.bottomCenter,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black54],
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 6),
-          SizedBox(
-            width: double.infinity,
-            child: Text(
-              _titleOf(media),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+          // ✅ TIÊU ĐỀ ĐƯỢC CẬP NHẬT
+          Text(
+            (media.title?.trim().isNotEmpty == true)
+                ? media.title!.trim()
+                : (media.fileDescription?.trim().isNotEmpty == true)
+                    ? media.fileDescription!.trim()
+                    // Lấy tên file và bỏ phần mở rộng
+                    : media.fileName.split('.').first,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+          // ✅ THÊM THỂ LOẠI (GENRE) NẾU CÓ
+          if (media.genre != null && media.genre!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2.0),
+              child: Text(
+                media.genre!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
               ),
             ),
-          ),
         ],
       ),
     );

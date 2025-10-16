@@ -11,20 +11,31 @@ class MediaInfoDTO {
   final String fileExtension;
   final int fileSizeInBytes;
   final String? fileUrl;
-  // ✅ THÊM/CẬP NHẬT TRƯỜNG NÀY
   final String? thumbnailUrl;
+
+  // Các trường meta mới
+  final String? title;
+  final String? intro;
+  final String? genre;
+  final int? year;
+  final int? movieId;
 
   MediaInfoDTO({
     required this.id,
     required this.fileName,
-    this.fileDescription,
     required this.fileExtension,
     required this.fileSizeInBytes,
+    this.fileDescription,
     this.fileUrl,
-    this.thumbnailUrl, // Cập nhật constructor
+    this.thumbnailUrl,
+    this.title,
+    this.intro,
+    this.genre,
+    this.year,
+    this.movieId,
   });
 
-  // Giữ nguyên các hàm này, build_runner sẽ tự động cập nhật chúng
+  // Hai dòng này sẽ trỏ đến code được tự động tạo ra trong file 'media_dto.g.dart'
   factory MediaInfoDTO.fromJson(Map<String, dynamic> json) =>
       _$MediaInfoDTOFromJson(json);
   Map<String, dynamic> toJson() => _$MediaInfoDTOToJson(this);

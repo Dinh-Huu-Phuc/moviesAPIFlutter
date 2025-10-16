@@ -1,4 +1,3 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
@@ -6,7 +5,10 @@ import 'package:flutter/services.dart';
 import 'services/movies_api.dart';
 import 'repos/movie_repo.dart';
 import 'providers/movie_provider.dart';
-import 'pages/movie_list_page.dart';
+// import 'pages/movie_list_page.dart'; // Dòng này không cần nữa
+
+// ✅ BƯỚC 1: Thêm import cho trang MovieDisplay
+import 'Screen/movie.dart'; // Thay 'Screen/movie.dart' bằng đường dẫn đúng của bạn
 
 // Import các file cho Media
 import 'repos/media_repo.dart';
@@ -26,7 +28,6 @@ void main() {
   final moviesApi = MoviesApi(dio, baseUrl: dio.options.baseUrl);
   final movieRepo = MovieRepo(moviesApi);
 
-  // ✅ SỬA LẠI DÒNG NÀY ĐỂ TRUYỀN 'dio' VÀO
   final mediaRepo = MediaRepo(moviesApi, dio, baseUrl: dio.options.baseUrl);
 
   runApp(
@@ -47,7 +48,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Movie App',
       debugShowCheckedModeBanner: false,
-      home: const MovieListPage(),
+      // ✅ BƯỚC 2: Chỉ cần thay đổi home ở đây
+      home: const MovieDisplay(),
     );
   }
 }
