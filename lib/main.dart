@@ -1,40 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/services.dart';
+
 import 'services/movies_api.dart';
 import 'repos/movie_repo.dart';
 import 'providers/movie_provider.dart';
-// import 'pages/movie_list_page.dart'; // Dòng này không cần nữa
-
-// ✅ BƯỚC 1: Thêm import cho trang MovieDisplay
-import 'Screen/movie.dart'; // Thay 'Screen/movie.dart' bằng đường dẫn đúng của bạn
-
-// Import các file cho Media
 import 'repos/media_repo.dart';
 import 'providers/media_provider.dart';
+import 'providers/auth_service.dart';
+import 'Screen/movie.dart'; // ✅ Thêm import cho trang MovieDisplay
 
 void main() {
-  // Cấu hình Dio, giữ nguyên
   final dio = Dio(BaseOptions(
-    baseUrl: 'http://10.0.2.2:5099',
+    baseUrl: 'http://10.0.2.2:5099', // Hoặc IP của máy bạn nếu dùng máy thật
     headers: {'Accept': 'application/json'},
     connectTimeout: const Duration(seconds: 30),
     receiveTimeout: const Duration(seconds: 30),
   ));
   dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
 
-  // Khởi tạo các API và Repo
   final moviesApi = MoviesApi(dio, baseUrl: dio.options.baseUrl);
   final movieRepo = MovieRepo(moviesApi);
-
   final mediaRepo = MediaRepo(moviesApi, dio, baseUrl: dio.options.baseUrl);
 
   runApp(
+    // Giữ lại MultiProvider để các trang khác vẫn có thể truy cập
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => MovieProvider(movieRepo)),
         ChangeNotifierProvider(create: (_) => MediaProvider(mediaRepo)),
+        ChangeNotifierProvider(create: (_) => AuthService()),
       ],
       child: const MyApp(),
     ),
@@ -46,10 +41,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Movie App',
+      title: 'Phim Lậu',
+      theme: ThemeData.dark().copyWith(
+        primaryColor: Colors.white,
+        scaffoldBackgroundColor: Colors.black,
+      ),
       debugShowCheckedModeBanner: false,
-      // ✅ BƯỚC 2: Chỉ cần thay đổi home ở đây
+      // ✅ THAY ĐỔI TRANG CHỦ TẠI ĐÂY
       home: const MovieDisplay(),
     );
   }
 }
+

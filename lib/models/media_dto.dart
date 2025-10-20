@@ -12,6 +12,7 @@ class MediaInfoDTO {
   final int fileSizeInBytes;
   final String? fileUrl;
   final String? thumbnailUrl;
+  final String? thumbnailFileName;
 
   // Các trường meta mới
   final String? title;
@@ -28,6 +29,7 @@ class MediaInfoDTO {
     this.fileDescription,
     this.fileUrl,
     this.thumbnailUrl,
+    this.thumbnailFileName,
     this.title,
     this.intro,
     this.genre,

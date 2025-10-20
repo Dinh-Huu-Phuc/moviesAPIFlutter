@@ -2,18 +2,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:movie_api_flutter/widgets/movie_tile.dart';
-// import 'package:movie_api_flutter/widgets/movie_tile.dart'; // Lỗi sai chính tả, sửa lại
-
 import 'package:provider/provider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import '../providers/media_provider.dart';
 import '../models/media_dto.dart';
 
-import '../pages/media_player_page.dart';
-
-// ✅ BƯỚC 1: Thêm import cho trang bạn muốn chuyển đến khi bấm nút
-// import 'package:movie_api_flutter/pages/another_movie_page.dart'; // <-- Thay bằng trang của bạn
+import '../providers/auth_service.dart';
+import 'media_player_page.dart';
+import 'auth_page.dart';
+import 'profile_page.dart';
 
 // Dữ liệu phim giả để demo dropdown
 class _MovieOption {
@@ -76,23 +74,28 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
     super.dispose();
   }
 
-  // ✅ BƯỚC 2: Cập nhật hàm xử lý khi bấm nút
-  void _applyTypeFromBottomNav(int idx) {
-    // Nếu người dùng bấm vào nút "Vào trang phim" (index = 3)
-    if (idx == 3) {
-      // Thì điều hướng đến trang mới
-      // Navigator.push(
-      //   context,
-      //   MaterialPageRoute(builder: (context) => const AnotherMoviePage()), // <-- Thay bằng trang của bạn
-      // );
-      print("Đã bấm nút chuyển trang!");
-      return; // Dừng hàm ở đây, không làm gì thêm
+  // Hàm xử lý khi một tab ở thanh dưới được chọn
+  void _onBottomNavTapped(int index) {
+    // Lấy AuthService để kiểm tra trạng thái đăng nhập
+    final auth = context.read<AuthService>();
+
+    // Nếu người dùng bấm vào nút "Tài khoản" (index = 3)
+    if (index == 3) {
+      // Kiểm tra xem đã đăng nhập chưa
+      if (auth.isLoggedIn) {
+        // Nếu rồi, vào trang Profile
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
+      } else {
+        // Nếu chưa, vào trang Đăng nhập
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const AuthPage()));
+      }
+      return; // Dừng lại, không đổi tab đang được chọn
     }
     
-    // Nếu không phải nút mới thì giữ nguyên logic cũ
-    setState(() => _bottomIndex = idx);
+    // Nếu không phải nút "Tài khoản" thì giữ nguyên logic cũ
+    setState(() => _bottomIndex = index);
     final pv = context.read<MediaProvider>();
-    switch (idx) {
+    switch (index) {
       case 1: pv.setType(MediaTypeFilter.video); break;
       case 2: pv.setType(MediaTypeFilter.image); break;
       default: pv.setType(MediaTypeFilter.all);
@@ -106,10 +109,10 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        // ... (Giữ nguyên không đổi)
         backgroundColor: Colors.black,
+        automaticallyImplyLeading: false, // Ẩn nút back mặc định
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        title: const Text('Phim Lậu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -138,10 +141,12 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
           ? Center(child: Text('Lỗi: ${pv.error}', style: const TextStyle(color: Colors.white70)))
           : RefreshIndicator(
               onRefresh: () => pv.refresh(),
+              backgroundColor: Colors.grey[900],
+              color: Colors.white,
               child: CustomScrollView(
                 controller: _scroll,
                 slivers: [
-                  // ... (Toàn bộ phần Sliver giữ nguyên không đổi)
+                  // --- Thanh tìm kiếm ---
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -193,7 +198,11 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
                       ),
                     ),
                   ),
+
+                  // --- Banner ---
                   const SliverToBoxAdapter(child: _BannerSection()),
+
+                  // --- Lưới Media ---
                   SliverPadding(
                     padding: const EdgeInsets.all(12),
                     sliver: SliverGrid(
@@ -209,6 +218,8 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
                       ),
                     ),
                   ),
+
+                  // --- Footer Loading ---
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24),
@@ -224,14 +235,13 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
                 ],
               ),
             ),
-      // ✅ BƯỚC 3: Thêm mục mới vào danh sách destinations
       bottomNavigationBar: NavigationBar(
         backgroundColor: Colors.black,
         surfaceTintColor: Colors.black,
         indicatorColor: Colors.white10,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         selectedIndex: _bottomIndex,
-        onDestinationSelected: _applyTypeFromBottomNav,
+        onDestinationSelected: _onBottomNavTapped,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.grid_view, color: Colors.white70),
@@ -248,11 +258,10 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
             selectedIcon: Icon(Icons.image, color: Colors.white),
             label: 'Ảnh',
           ),
-          // MỤC MỚI ĐƯỢC THÊM VÀO ĐÂY
           NavigationDestination(
-            icon: Icon(Icons.movie_outlined, color: Colors.white70),
-            selectedIcon: Icon(Icons.movie, color: Colors.white),
-            label: 'Vào trang phim',
+            icon: Icon(Icons.person_outline, color: Colors.white70),
+            selectedIcon: Icon(Icons.person, color: Colors.white),
+            label: 'Tài khoản',
           ),
         ],
       ),
@@ -264,7 +273,6 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
 // CÁC WIDGET PHỤ (GIỮ NGUYÊN)
 // ====================================================================
 
-// ... (Toàn bộ phần widget phụ giữ nguyên không đổi)
 class _BannerData {
   final String imagePath;
   final String title;
@@ -282,18 +290,35 @@ class _BannerSectionState extends State<_BannerSection> {
     _BannerData('assets/images/banner.png', 'NỔI BẬT'),
     _BannerData('assets/images/lieuthan1.jpg', 'LIỄU THẦN'),
     _BannerData('assets/images/thachhao.jpg', 'Thạch Hạo'),
-    _BannerData('assets/images/thachao1.jpg', 'Hoang Thiên Đế'),
+    //_BannerData('assets/images/thachao1.jpg', 'Hoang Thiên Đế'),
+    _BannerData('assets/images/lieuthan.jpg', 'Tiên Vương Liễu Thần'),
   ];
   late final PageController _pageController;
+  Timer? _bannerTimer;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    // Tự động chuyển banner sau mỗi 5 giây
+    _bannerTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (_pageController.hasClients) {
+        int nextPage = _pageController.page!.round() + 1;
+        if (nextPage >= _banners.length) {
+          nextPage = 0;
+        }
+        _pageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    _bannerTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -301,7 +326,7 @@ class _BannerSectionState extends State<_BannerSection> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 550,
+      height: 600,
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: Stack(
         alignment: Alignment.bottomCenter,
@@ -384,3 +409,4 @@ class _SingleBannerItem extends StatelessWidget {
     );
   }
 }
+

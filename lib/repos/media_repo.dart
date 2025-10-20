@@ -1,18 +1,20 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 
+import '../config/api_base.dart';
 import '../services/movies_api.dart';
 import '../models/media_dto.dart';
 import '../models/paged_media_dto.dart';
 
-const String _hostHttp = 'http://10.0.2.2:5099';
-
 class MediaRepo {
   final MoviesApi api;
   final Dio dio;
+
+  /// Có thể truyền khác đi nếu cần, mặc định lấy từ ApiBase.base
   final String baseUrl;
 
-  MediaRepo(this.api, this.dio, {required this.baseUrl});
+  MediaRepo(this.api, this.dio, {String? baseUrl})
+      : baseUrl = baseUrl ?? ApiBase.base;
 
   // ==================================================
   // HÀM CŨ (GIỮ NGUYÊN)
@@ -20,46 +22,87 @@ class MediaRepo {
   Future<List<MediaInfoDTO>> list() => api.getAllMedia();
 
   // ==================================================
-  // ✅ HÀM ĐƯỢC CẬP NHẬT
+  // ✅ PHÂN TRANG: map đúng tham số pageNumber, pageSize
   // ==================================================
   Future<PagedMediaResponseDTO> listPaged({
-    int pageNumber = 1,      // Đổi tên tham số
-    int pageSize = 24,       // Đổi tên tham số
+    int pageNumber = 1,
+    int pageSize = 24,
     int? movieId,
-    String type = 'all',
+    String type = 'all', // 'all' | 'video' | 'image'
     String? q,
   }) async {
-    final url = '$baseUrl/api/Movie/GetMediaPaged';
-    final resp = await dio.get(url, queryParameters: {
-      'pageNumber': pageNumber, // Giờ đây tên khớp nhau
-      'pageSize': pageSize,   // Giờ đây tên khớp nhau
-      if (movieId != null) 'movieId': movieId,
+    final uri = ApiBase.build('/api/Movie/GetMediaPaged', {
+      'pageNumber': '$pageNumber',
+      'pageSize': '$pageSize',
       'type': type,
-      if (q != null && q.isNotEmpty) 'q': q,
+      if (movieId != null) 'movieId': '$movieId',
+      if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
     });
+
+    final resp = await dio.get(uri.toString());
     return PagedMediaResponseDTO.fromJson(resp.data);
   }
 
   // ==================================================
-  // HÀM CŨ (GIỮ NGUYÊN)
+  // ✅ Chuẩn hoá URL (khi BE trả localhost/Images, app đang chạy device)
   // ==================================================
-  String resolveUrl(MediaInfoDTO m) {
-    var raw = (m.fileUrl?.isNotEmpty ?? false) ? m.fileUrl! : '';
+  String _normalizeUrl(String raw) {
+    if (raw.isEmpty) return raw;
 
-    if (raw.isEmpty && (m.fileName.isNotEmpty)) {
-      raw = '$_hostHttp/uploads/${m.fileName}';
+    // chuẩn hoá /Images -> /uploads
+    var u = raw.replaceAll('/Images/', '/uploads/');
+
+    // thay các localhost bằng baseUrl hiện tại
+    final targets = <String>[
+      'https://localhost:7138',
+      'http://localhost:7138',
+      'http://localhost:5099',
+      'http://0.0.0.0:5099',
+    ];
+    for (final t in targets) {
+      if (u.startsWith(t)) {
+        // ghép path phía sau vào baseUrl hiện tại
+        final path = u.substring(t.length);
+        final b = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
+        u = '$b$path';
+        break;
+      }
     }
-
-    raw = raw
-        .replaceAll('https://localhost:7138', _hostHttp)
-        .replaceAll('http://localhost:7138', _hostHttp)
-        .replaceAll('http://localhost:5099', _hostHttp)
-        .replaceAll('/Images/', '/uploads/');
 
     try {
-      return Uri.parse(raw).toString();
+      return Uri.parse(u).toString();
     } catch (_) {
-      return raw;
+      return u;
     }
+  }
+
+  // ==================================================
+  // ✅ Trả URL tuyệt đối cho video/ảnh
+  // ==================================================
+  String resolveUrl(MediaInfoDTO m) {
+    // Ưu tiên server trả sẵn fileUrl
+    if ((m.fileUrl?.isNotEmpty ?? false)) {
+      return _normalizeUrl(m.fileUrl!);
+    }
+
+    // Fallback: có fileName thì build từ /uploads
+    if (m.fileName.isNotEmpty) {
+      return ApiBase.uploads(m.fileName);
+    }
+
+    return '';
+  }
+
+  // ==================================================
+  // ✅ Trả URL thumbnail (nếu có)
+  // ==================================================
+  String? resolveThumb(MediaInfoDTO m) {
+    if ((m.thumbnailUrl?.isNotEmpty ?? false)) {
+      return _normalizeUrl(m.thumbnailUrl!);
+    }
+    if ((m.thumbnailFileName?.isNotEmpty ?? false)) {
+      return ApiBase.uploads(m.thumbnailFileName!);
+    }
+    return null;
   }
 }

@@ -114,7 +114,7 @@ class _DetailScreenState extends State<DetailScreen> {
                             ),
                             FadeInUp(
                               child: Text(
-                                " Ticket: \$${widget.movie.price}.00",
+                                " Free",
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold, fontSize: 20),
                               ),
@@ -200,11 +200,11 @@ class _DetailScreenState extends State<DetailScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 140, vertical: 15),
                             decoration: BoxDecoration(
-                              color: Colors.blue,
+                              color: Colors.black,
                               borderRadius: BorderRadius.circular(30),
                             ),
                             child: const Text(
-                              "Check Out",
+                              "Lấy Ảnh Ngay",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
