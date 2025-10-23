@@ -113,6 +113,7 @@ class _MovieDisplayState extends State<MovieDisplay> {
                                         style: const TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
+                                          color: Colors.black,
                                         ),
                                       ),
                                       const SizedBox(height: 10),

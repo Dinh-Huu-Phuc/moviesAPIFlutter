@@ -1,15 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:movie_api_flutter/widgets/movie_tile.dart';
+import 'package:movie_api_flutter/widgets/movie_tile.dart'; // Đã có
 import 'package:provider/provider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import '../providers/media_provider.dart';
 import '../models/media_dto.dart';
-
 import '../providers/auth_service.dart';
-import 'media_player_page.dart';
+import 'media_player_page.dart'; // Dùng trong MediaTile (nếu có)
+import 'media_detail_page.dart'; // ✅ Thêm import này
 import 'auth_page.dart';
 import 'profile_page.dart';
 
@@ -62,7 +61,7 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
     Future.microtask(() {
       final pv = context.read<MediaProvider>();
       pv.setType(MediaTypeFilter.all);
-      pv.refresh();
+      // pv.refresh(); // Hàm setType đã tự động gọi refresh()
     });
   }
 
@@ -93,6 +92,11 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
     }
     
     // Nếu không phải nút "Tài khoản" thì giữ nguyên logic cũ
+    // Cuộn lên đầu trang khi chuyển tab
+    if (_scroll.hasClients) {
+      _scroll.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+    }
+
     setState(() => _bottomIndex = index);
     final pv = context.read<MediaProvider>();
     switch (index) {
@@ -112,7 +116,7 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
         backgroundColor: Colors.black,
         automaticallyImplyLeading: false, // Ẩn nút back mặc định
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Phim Lậu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        title: const Text('Nhóm SupperCell', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -138,103 +142,108 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
         ],
       ),
       body: pv.error != null
+          // 1. Trường hợp có lỗi
           ? Center(child: Text('Lỗi: ${pv.error}', style: const TextStyle(color: Colors.white70)))
-          : RefreshIndicator(
-              onRefresh: () => pv.refresh(),
-              backgroundColor: Colors.grey[900],
-              color: Colors.white,
-              child: CustomScrollView(
-                controller: _scroll,
-                slivers: [
-                  // --- Thanh tìm kiếm ---
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      child: TextField(
-                        controller: _searchCtrl,
-                        onChanged: (text) {
-                          final q = text.trim();
-                          if (q.isEmpty && _deb != null) {
+          // 2. Trường hợp đang tải lần đầu (chưa có item nào)
+          : pv.loading && pv.items.isEmpty && pv.homePagePosters.isEmpty
+            ? const Center(child: CircularProgressIndicator(color: Colors.white,))
+            // 3. Trường hợp chính: hiển thị dữ liệu
+            : RefreshIndicator(
+                onRefresh: () => pv.refresh(),
+                backgroundColor: Colors.grey[900],
+                color: Colors.white,
+                child: CustomScrollView(
+                  controller: _scroll,
+                  slivers: [
+                    // --- Thanh tìm kiếm ---
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        child: TextField(
+                          controller: _searchCtrl,
+                          onChanged: (text) {
+                            final q = text.trim();
+                            // Sửa lại logic debounce một chút
                             _deb?.cancel();
-                            context.read<MediaProvider>().setQuery('');
-                            return;
-                          }
-                          _deb?.cancel();
-                          _deb = Timer(const Duration(milliseconds: 400), () {
-                            context.read<MediaProvider>().setQuery(q);
-                          });
-                        },
-                        onSubmitted: (s) {
-                          _deb?.cancel();
-                          context.read<MediaProvider>().setQuery(s.trim());
-                        },
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: 'Tìm kiếm phim...',
-                          hintStyle: const TextStyle(color: Colors.white70),
-                          prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                          suffixIcon: (_searchCtrl.text.isEmpty)
-                              ? null
-                              : IconButton(
-                                  icon: const Icon(Icons.clear, color: Colors.white70),
-                                  onPressed: () {
-                                    _searchCtrl.clear();
-                                    _deb?.cancel();
-                                    context.read<MediaProvider>().setQuery('');
-                                  },
-                                ),
-                          filled: true,
-                          fillColor: const Color(0xFF1C1C1C),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.white24, width: 0.8),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.white54, width: 1),
+                            _deb = Timer(const Duration(milliseconds: 400), () {
+                              context.read<MediaProvider>().setQuery(q);
+                            });
+                          },
+                          onSubmitted: (s) {
+                            _deb?.cancel();
+                            context.read<MediaProvider>().setQuery(s.trim());
+                          },
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Tìm kiếm phim...',
+                            hintStyle: const TextStyle(color: Colors.white70),
+                            prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                            suffixIcon: (_searchCtrl.text.isEmpty)
+                                ? null
+                                : IconButton(
+                                    icon: const Icon(Icons.clear, color: Colors.white70),
+                                    onPressed: () {
+                                      _searchCtrl.clear();
+                                      _deb?.cancel();
+                                      context.read<MediaProvider>().setQuery('');
+                                    },
+                                  ),
+                            filled: true,
+                            fillColor: const Color(0xFF1C1C1C),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Colors.white24, width: 0.8),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Colors.white54, width: 1),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
 
-                  // --- Banner ---
-                  const SliverToBoxAdapter(child: _BannerSection()),
+                    // --- Banner ---
+                    // ✅ ĐÃ XÓA CÂU LỆNH IF -> BANNER LUÔN HIỂN THỊ
+                    const SliverToBoxAdapter(child: _BannerSection()),
 
-                  // --- Lưới Media ---
-                  SliverPadding(
-                    padding: const EdgeInsets.all(12),
-                    sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                        childAspectRatio: 0.7,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (ctx, i) => MediaTile(media: pv.items[i]),
-                        childCount: pv.items.length,
+                    // ✅ --- LOGIC HIỂN THỊ MỚI ---
+
+                    // --- Trường hợp 1: Tab "Tất cả" ---
+                    if (_bottomIndex == 0) ...[
+                      // 1. Khu vực Ảnh (cuộn ngang)
+                      if (pv.homePagePosters.isNotEmpty) ...[
+                        const _SectionHeader(title: 'Hình ảnh nổi bật'),
+                        _HorizontalPosterList(posters: pv.homePagePosters),
+                      ],
+                      
+                      // 2. Khu vực Phim (cuộn dọc)
+                      const _SectionHeader(title: 'Phim mới cập nhật'),
+                      _VerticalMediaGrid(items: pv.items),
+                    ],
+                      
+                    // --- Trường hợp 2: Tab "Video" hoặc "Ảnh" ---
+                    if (_bottomIndex != 0) ...[
+                      _VerticalMediaGrid(items: pv.items),
+                    ],
+
+                    // --- Footer Loading ---
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: pv.loading && (pv.items.isNotEmpty || pv.homePagePosters.isNotEmpty)
+                              ? const CircularProgressIndicator(color: Colors.white,)
+                              : (!pv.hasMore && (pv.items.isNotEmpty || pv.homePagePosters.isNotEmpty))
+                                ? const Text('—Chờ Nhóm Tớ Cập Nhật Thêm Nha ❤️—', style: TextStyle(color: Colors.white))
+                                : const SizedBox.shrink(),
+                        ),
                       ),
                     ),
-                  ),
-
-                  // --- Footer Loading ---
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Center(
-                        child: pv.loading && pv.items.isNotEmpty
-                            ? const CircularProgressIndicator()
-                            : (pv.hasMore
-                                ? const SizedBox.shrink()
-                                : const Text('— Hết dữ liệu —', style: TextStyle(color: Colors.white54))),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                  ],
+                ),
+              ), 
       bottomNavigationBar: NavigationBar(
         backgroundColor: Colors.black,
         surfaceTintColor: Colors.black,
@@ -270,7 +279,119 @@ class _MediaGalleryPageState extends State<MediaGalleryPage>
 }
 
 // ====================================================================
-// CÁC WIDGET PHỤ (GIỮ NGUYÊN)
+// ✅ CÁC WIDGET PHỤ (GIỮ NGUYÊN)
+// ====================================================================
+
+// --- Tiêu đề cho các khu vực ---
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  const _SectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- Lưới cuộn dọc (cho tab Video/Ảnh và phần Phim của tab Tất cả) ---
+class _VerticalMediaGrid extends StatelessWidget {
+  final List<MediaInfoDTO> items;
+  const _VerticalMediaGrid({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    // Thêm kiểm tra nếu items rỗng
+    if (items.isEmpty) {
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 48.0),
+          child: Center(
+            child: Text(
+              'Không tìm thấy kết quả phù hợp.',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Đây chính là SliverPadding cũ của bạn, được tách ra
+    return SliverPadding(
+      padding: const EdgeInsets.all(12),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 0.7, // Tỷ lệ chiều rộng/chiều cao
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (ctx, i) {
+            final media = items[i];
+            // ✅ Thêm GestureDetector để điều hướng
+            return GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => MediaDetailPage(media: media)
+              )),
+              child: MediaTile(media: media),
+            );
+          },
+          childCount: items.length,
+        ),
+      ),
+    );
+  }
+}
+
+// --- WIDGET MỚI: Danh sách cuộn ngang cho Poster ---
+class _HorizontalPosterList extends StatelessWidget {
+  final List<MediaInfoDTO> posters;
+  const _HorizontalPosterList({required this.posters});
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Container(
+        height: 180, // Chiều cao của list ngang
+        margin: const EdgeInsets.only(top: 8),
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          itemCount: posters.length,
+          itemBuilder: (context, index) {
+            final media = posters[index];
+            return Container(
+              width: 110, // Chiều rộng của mỗi item
+              margin: const EdgeInsets.only(right: 8),
+              child: GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => MediaDetailPage(media: media)
+                )),
+                child: MediaTile(media: media),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+
+// ====================================================================
+// CÁC WIDGET PHỤ CỦA BẠN (GIỮ NGUYÊN)
 // ====================================================================
 
 class _BannerData {
@@ -326,7 +447,8 @@ class _BannerSectionState extends State<_BannerSection> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 600,
+      // ✅ Đổi chiều cao banner cho hợp lý hơn
+      height: 600, 
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: Stack(
         alignment: Alignment.bottomCenter,

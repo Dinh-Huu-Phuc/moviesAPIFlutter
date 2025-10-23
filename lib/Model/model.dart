@@ -40,7 +40,7 @@ final List<Movie> movieItems = [
     id: 1,
     title: 'Liễu Thần',
     image: 'assets/images/lieuthan.jpg', // <-- Đã đổi
-    director: 'Direct by Todd Phillips',
+    director: 'Tiên Vương Liễu Thần',
     rating: '5.0',
     duration: "2h:42m",
     price: "250"
@@ -49,7 +49,7 @@ final List<Movie> movieItems = [
     id: 2,
     title: 'Liễu Thần',
     image: 'assets/images/lieuthan4.jpg', // <-- Đã đổi
-    director: ' Direct by Siddharth Anand',
+    director: ' Tiên Vương Liễu Thần',
     rating: '5.0',
     duration: "2h:10m",
       price: "200"
@@ -58,7 +58,7 @@ final List<Movie> movieItems = [
     id: 3,
    title: 'Liễu Thần',
     image: 'assets/images/lieuthan2.jpg', // <-- Đã đổi
-    director: 'Direct by Penny Marshall',
+    director: 'Tiên Vương Liễu Thần',
     rating: '4.6',
     duration: "1h:45m",
     price: "100"
@@ -67,7 +67,7 @@ final List<Movie> movieItems = [
     id: 4,
     title: 'Liễu Thần',
     image: 'assets/images/lieuthan3.jpg', // <-- Đã đổi
-    director: 'Direct byTodd Phillips',
+    director: 'Tiên Vương Liễu Thần',
     rating: '5.0',
     duration: "2h:42m",
     price: "50"
@@ -76,7 +76,7 @@ final List<Movie> movieItems = [
     id: 5,
     title: 'Thạch Hạo',
     image: 'assets/images/thachhao.jpg', // <-- Đã đổi
-    director: 'Direct by Ed Bye',
+    director: 'Chuẩn Tiên Đế Hoang',
     rating: '4.0',
     duration: "1h:22m",
     price: "150"
@@ -85,7 +85,52 @@ final List<Movie> movieItems = [
     id: 6,
     title: 'Thạch Hạo',
     image: 'assets/images/thachhao1.jpg', // <-- Đã đổi
-    director: 'Direct by Ed Bye',
+    director: 'Hoang Thiên Đế',
+    rating: '4.0',
+    duration: "1h:22m",
+    price: "150"
+  ),
+  Movie(
+    id: 7,
+    title: 'Liễu Thần',
+    image: 'assets/images/image1.jpg', // <-- Đã đổi
+    director: 'Hoang Thiên Đế',
+    rating: '4.0',
+    duration: "1h:22m",
+    price: "150"
+  ),
+  Movie(
+    id: 8,
+    title: 'Liễu Thần',
+    image: 'assets/images/image2.jpg', // <-- Đã đổi
+    director: 'Hoang Thiên Đế',
+    rating: '4.0',
+    duration: "1h:22m",
+    price: "150"
+  ),
+  Movie(
+    id: 9,
+    title: 'Liễu Thần',
+    image: 'assets/images/image3.jpg', // <-- Đã đổi
+    director: 'Hoang Thiên Đế',
+    rating: '4.0',
+    duration: "1h:22m",
+    price: "150"
+  ),
+  Movie(
+    id: 10,
+    title: 'Liễu Thần',
+    image: 'assets/images/image4.jpg', // <-- Đã đổi
+    director: 'Hoang Thiên Đế',
+    rating: '4.0',
+    duration: "1h:22m",
+    price: "150"
+  ),
+  Movie(
+    id: 11,
+    title: 'Thanh Y',
+    image: 'assets/images/image5.jpg', // <-- Đã đổi
+    director: 'Hoang Thiên Đế',
     rating: '4.0',
     duration: "1h:22m",
     price: "150"
@@ -104,7 +149,7 @@ List<Color> colors = [
   Colors.black,
   Colors.purple,
   Colors.amber,
-  Colors.blueGrey,
+  Colors.black,
   Colors.deepPurple,
   Colors.yellow,
 ];

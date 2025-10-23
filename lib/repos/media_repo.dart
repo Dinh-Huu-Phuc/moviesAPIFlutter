@@ -22,7 +22,7 @@ class MediaRepo {
   Future<List<MediaInfoDTO>> list() => api.getAllMedia();
 
   // ==================================================
-  // ✅ PHÂN TRANG: map đúng tham số pageNumber, pageSize
+  // PHÂN TRANG (GIỮ NGUYÊN)
   // ==================================================
   Future<PagedMediaResponseDTO> listPaged({
     int pageNumber = 1,
@@ -44,15 +44,48 @@ class MediaRepo {
   }
 
   // ==================================================
-  // ✅ Chuẩn hoá URL (khi BE trả localhost/Images, app đang chạy device)
+  // ✅ HÀM MỚI ĐỂ LẤY DỮ LIỆU POSTER (ẢNH)
   // ==================================================
+  Future<List<MediaInfoDTO>> listPosters() async {
+    final uri = ApiBase.build('/api/Poster');
+    
+    final resp = await dio.get(uri.toString());
+
+    if (resp.data is List) {
+      final List<dynamic> posterList = resp.data;
+      
+      // Map dữ liệu PosterDto (từ API) sang MediaInfoDTO (dùng chung trong app)
+      return posterList.map((json) {
+        return MediaInfoDTO(
+          id: json['id'] ?? 0,
+          // Với ảnh, fileUrl và thumbnailUrl là một
+          fileUrl: _normalizeUrl(json['fileUrl'] ?? ''),
+          thumbnailUrl: _normalizeUrl(json['fileUrl'] ?? ''),
+          
+          fileName: json['fileName'] ?? '',
+          fileExtension: json['fileExtension'] ?? '.jpg',
+          fileSizeInBytes: json['fileSizeInBytes'] ?? 0,
+          fileDescription: json['fileDescription'],
+          
+          // Dùng FileDescription hoặc FileName làm Title
+          title: json['fileDescription'] ?? json['fileName'],
+          intro: json['fileDescription'],
+        );
+      }).toList();
+    } else {
+      // Nếu API không trả về một danh sách, ném ra lỗi
+      throw Exception('API /api/Poster không trả về dữ liệu mong muốn.');
+    }
+  }
+
+
+  // ==================================================
+  // CÁC HÀM HELPER (GIỮ NGUYÊN)
+  // ==================================================
+  
   String _normalizeUrl(String raw) {
     if (raw.isEmpty) return raw;
-
-    // chuẩn hoá /Images -> /uploads
     var u = raw.replaceAll('/Images/', '/uploads/');
-
-    // thay các localhost bằng baseUrl hiện tại
     final targets = <String>[
       'https://localhost:7138',
       'http://localhost:7138',
@@ -61,14 +94,12 @@ class MediaRepo {
     ];
     for (final t in targets) {
       if (u.startsWith(t)) {
-        // ghép path phía sau vào baseUrl hiện tại
         final path = u.substring(t.length);
         final b = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
         u = '$b$path';
         break;
       }
     }
-
     try {
       return Uri.parse(u).toString();
     } catch (_) {
@@ -76,26 +107,16 @@ class MediaRepo {
     }
   }
 
-  // ==================================================
-  // ✅ Trả URL tuyệt đối cho video/ảnh
-  // ==================================================
   String resolveUrl(MediaInfoDTO m) {
-    // Ưu tiên server trả sẵn fileUrl
     if ((m.fileUrl?.isNotEmpty ?? false)) {
       return _normalizeUrl(m.fileUrl!);
     }
-
-    // Fallback: có fileName thì build từ /uploads
     if (m.fileName.isNotEmpty) {
       return ApiBase.uploads(m.fileName);
     }
-
     return '';
   }
 
-  // ==================================================
-  // ✅ Trả URL thumbnail (nếu có)
-  // ==================================================
   String? resolveThumb(MediaInfoDTO m) {
     if ((m.thumbnailUrl?.isNotEmpty ?? false)) {
       return _normalizeUrl(m.thumbnailUrl!);

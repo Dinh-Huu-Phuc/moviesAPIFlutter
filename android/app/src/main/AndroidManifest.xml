@@ -1,24 +1,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Quyền mạng cho API/ảnh/video -->
     <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- Android 13+ (API 33): đọc ảnh & video trong máy khi dùng image_picker -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    
-
-
-    <!-- Android <= 32: quyền đọc bộ nhớ cũ -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
 
     <application
         android:label="movie_api_flutter"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true"> <!-- cho phép HTTP (10.0.2.2) -->
+        android:usesCleartextTraffic="true"
+        android:enableOnBackInvokedCallback="true">
 
         <activity
             android:name=".MainActivity"
@@ -40,13 +36,11 @@
             </intent-filter>
         </activity>
 
-        <!-- Bắt buộc cho Flutter -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
 
-    <!-- Giữ lại phần queries (không ảnh hưởng) -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />

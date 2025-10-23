@@ -98,6 +98,7 @@ class _DetailScreenState extends State<DetailScreen> {
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 25,
+                                      color: Colors.black,
                                     ),
                                   ),
                                 ),
@@ -116,7 +117,10 @@ class _DetailScreenState extends State<DetailScreen> {
                               child: Text(
                                 " Free",
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 20),
+                                    fontWeight: FontWeight.bold, 
+                                    fontSize: 20,
+                                    color: Colors.black,
+                                  ),
                               ),
                             ),
                           ],
@@ -128,7 +132,7 @@ class _DetailScreenState extends State<DetailScreen> {
                             " ${widget.movie.title} movie is a motion picture, moving picture, picture, photoplay work of visual art that simulates experiences and communicates ideas, stories, feelings, beauty, or atmosphere ",
                             style: TextStyle(
                               fontSize: 16,
-                              color: Colors.grey.shade700,
+                              color: Colors.black,
                             ),
                           ),
                         ),
@@ -136,10 +140,11 @@ class _DetailScreenState extends State<DetailScreen> {
                         FadeInUp(
                           delay: const Duration(milliseconds: 500),
                           child: const Text(
-                            " Movies Shows Time",
+                            " Lịch Chiếu Phim",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
                           ),
                         ),
@@ -207,7 +212,7 @@ class _DetailScreenState extends State<DetailScreen> {
                               "Lấy Ảnh Ngay",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                                fontSize: 15,
                                 color: Colors.white,
                               ),
                             ),

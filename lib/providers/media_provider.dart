@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-// import 'dart.async';
-// import 'package.flutter/foundation.dart';
 import '../repos/media_repo.dart';
 import '../models/media_dto.dart';
-import '../models/paged_media_dto.dart';
+// import '../models/paged_media_dto.dart'; // Không cần trực tiếp ở đây
 
 enum MediaTypeFilter { all, video, image }
 
@@ -15,6 +13,9 @@ class MediaProvider extends ChangeNotifier {
   String? error;
   List<MediaInfoDTO> items = [];
   bool hasMore = true;
+
+  // ✅ DANH SÁCH MỚI DÀNH RIÊNG CHO POSTER Ở TRANG CHỦ
+  List<MediaInfoDTO> homePagePosters = [];
 
   // --- Trạng thái bộ lọc (private) ---
   MediaTypeFilter _type = MediaTypeFilter.all;
@@ -36,7 +37,6 @@ class MediaProvider extends ChangeNotifier {
     refresh();
   }
 
-  // ✅ CẬP NHẬT LẠI HÀM NÀY
   void setQuery(String q) {
     final normalized = q.trim();
     if (_query == normalized) return;
@@ -53,45 +53,78 @@ class MediaProvider extends ChangeNotifier {
   }
 
   Future<void> fetchMore() async {
-    if (!hasMore || loading) return;
+    // Chỉ tải thêm nếu không phải tab "Ảnh" (vì API ảnh không phân trang)
+    if (!hasMore || loading || _type == MediaTypeFilter.image) return;
     _page++;
     await _load(append: true);
   }
 
-  // ===== HÀM GỌI API CỐT LÕI =====
+  // ===== HÀM GỌI API CỐT LÕI (ĐÃ CẬP NHẬT) =====
   Future<void> _load({bool append = false}) async {
     if (loading) return;
     loading = true;
     error = null;
     if (!append) {
+      // Chỉ notify nếu là refresh (append=false)
+      // Khi tải thêm (append=true), indicator ở cuối list đã đủ
       notifyListeners();
     }
 
     try {
-      final typeStr = switch (_type) {
-        MediaTypeFilter.video => "video",
-        MediaTypeFilter.image => "image",
-        _ => "all",
-      };
+      if (_type == MediaTypeFilter.image) {
+        // --- 1. Tải dữ liệu cho tab "Ảnh" ---
+        if (append) return; // API ảnh không phân trang
+        final res = await repo.listPosters();
+        items = res;
+        homePagePosters.clear(); // Xóa poster trang chủ khi không ở tab "Tất cả"
+        hasMore = false;
+      
+      } else if (_type == MediaTypeFilter.video) {
+        // --- 2. Tải dữ liệu cho tab "Video" (chỉ video, phân trang) ---
+        homePagePosters.clear(); // Xóa poster trang chủ
+        final res = await repo.listPaged(
+          movieId: _movieId,
+          type: "video",
+          q: _query,
+          pageNumber: _page,
+          pageSize: _pageSize,
+        );
 
-      final res = await repo.listPaged(
-        movieId: _movieId,
-        type: typeStr,
-        q: _query,
-        pageNumber: _page,
-        pageSize: _pageSize,
-      );
+        if (append) {
+          items.addAll(res.items);
+        } else {
+          items = res.items;
+        }
+        hasMore = _page < res.totalPages;
 
-      if (append) {
-        items.addAll(res.items);
       } else {
-        items = res.items;
-      }
+        // --- 3. Tải dữ liệu cho tab "Tất cả" (Ảnh + Video) ---
+        
+        // Tải media phân trang (video)
+        final pagedRes = await repo.listPaged(
+          movieId: _movieId,
+          type: "all", // "all" ở đây giả định là trả về video/phim
+          q: _query,
+          pageNumber: _page,
+          pageSize: _pageSize,
+        );
 
-      hasMore = _page < res.totalPages;
+        if (append) {
+          // Nếu là tải thêm, chỉ thêm media phân trang (video) vào `items`
+          items.addAll(pagedRes.items);
+        } else {
+          // Nếu là refresh (trang 1), tải cả ảnh và video
+          final posterRes = await repo.listPosters();
+          homePagePosters = posterRes; // ✅ Lưu ảnh vào danh sách riêng
+          items = pagedRes.items; // ✅ Lưu video vào danh sách `items`
+        }
+        
+        // Phân trang chỉ dựa trên media (video)
+        hasMore = _page < pagedRes.totalPages;
+      }
     } catch (e) {
       error = e.toString();
-      if (_page > 1) _page--;
+      if (_page > 1 && append) _page--; // Nếu lỗi khi tải thêm, quay lại trang trước
     } finally {
       loading = false;
       notifyListeners();
@@ -103,15 +136,9 @@ class MediaProvider extends ChangeNotifier {
   String urlOf(MediaInfoDTO m) => repo.resolveUrl(m);
 
   String posterOf(MediaInfoDTO m) {
-    if (m.thumbnailUrl != null && m.thumbnailUrl!.isNotEmpty) {
-      final tempDtoForThumbnail = MediaInfoDTO(
-          id: m.id,
-          fileName: m.fileName,
-          fileExtension: m.fileExtension,
-          fileSizeInBytes: m.fileSizeInBytes,
-          fileDescription: m.fileDescription,
-          fileUrl: m.thumbnailUrl);
-      return repo.resolveUrl(tempDtoForThumbnail);
+    final thumbUrl = repo.resolveThumb(m);
+    if (thumbUrl != null && thumbUrl.isNotEmpty) {
+      return thumbUrl;
     }
     return repo.resolveUrl(m);
   }
@@ -126,3 +153,4 @@ class MediaProvider extends ChangeNotifier {
           ? m.fileDescription!
           : ((m.title?.isNotEmpty ?? false) ? m.title! : m.fileName);
 }
+
